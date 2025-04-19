@@ -1,9 +1,20 @@
-const fs = require('fs');
+const crypto = require('crypto');
+const readline = require('readline');
 
-fs.copyFile('source.txt', 'copy.txt', (err) => {
-  if (err) {
-    console.error('Error copying file:', err);
-    process.exit(1);
-  }
-  console.log('File successfully');
+function hashPassword(password) {
+  return crypto
+    .createHash('sha256')
+    .update(password)
+    .digest('hex');
+}
+
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout,
+});
+
+rl.question('Enter password: ', (password) => {
+  const hashed = hashPassword(password);
+  console.log(`SHA-256 hash: ${hashed}`);
+  rl.close();
 });
