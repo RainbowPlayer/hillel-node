@@ -1,9 +1,8 @@
-const fs = require('fs');
+const Chat = require('./chat');
+const chat = new Chat();
 
-fs.copyFile('source.txt', 'copy.txt', (err) => {
-  if (err) {
-    console.error('Error copying file:', err);
-    process.exit(1);
-  }
-  console.log('File successfully');
+chat.on('message', (msg) => {
+  console.log('New message:', msg);
 });
+
+chat.send('Hello World');
