@@ -1,9 +1,17 @@
-const fs = require('fs');
+const { exec } = require('child_process');
 
-fs.copyFile('source.txt', 'copy.txt', (err) => {
-  if (err) {
-    console.error('Error copying file:', err);
+const command = process.argv.slice(2).join(' ') || 'ls -la';
+
+console.log(`Executing: ${command}`);
+
+exec(command, (error, stdout, stderr) => {
+  if (error) {
+    console.error(`Error: ${error.message}`);
     process.exit(1);
   }
-  console.log('File successfully');
+  if (stderr) {
+    console.error(`stderr: ${stderr}`);
+  }
+  console.log('Output:');
+  console.log(stdout);
 });
