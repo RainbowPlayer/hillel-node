@@ -1,20 +1,19 @@
 const express = require('express');
 const path = require('path');
-
 const app = express();
 
-app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views'));
 
-const users = [
-  { name: 'Alice', age: 28, email: 'alice@example.com' },
-  { name: 'Bob',   age: 35, email: 'bob@example.com'   },
-  { name: 'Carol', age: 22, email: 'carol@example.com' },
+const products = [
+  { name: 'Ноутбук',   price: 25000, inStock: true  },
+  { name: 'Мишка',     price:  500, inStock: false },
+  { name: 'Клавіатура',price: 1500, inStock: true  },
+  { name: 'Монітор',   price: 8000, inStock: false },
 ];
 
-app.get('/users', (req, res) => {
-  res.render('users', { users });
+app.get('/products', (req, res) => {
+  res.render('products', { products });
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+app.listen(3000, () => console.log('Server on http://localhost:3000'));
