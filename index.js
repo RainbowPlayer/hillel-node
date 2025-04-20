@@ -1,17 +1,26 @@
+const readline = require('readline');
 
-const fs = require('fs');const path = require('path');
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout
+});
 
-const filePath = path.join(__dirname, 'file.bin');
+rl.question('Enter a message: ', (message) => {
+  console.log('Original message:', message);
 
-fs.readFile(filePath, (err, buffer) => {
-  if (err) {
-    console.error('Error reading file:', err);
-    process.exit(1);
-  }
+  const buffer = Buffer.from(message, 'utf-8');
 
-  console.log('Raw Buffer object:', buffer);
+  const binaryArray = Array.from(buffer).map(
+    byte => byte.toString(2).padStart(8, '0')
+  );
+  const binaryString = binaryArray.join(' ');
+  console.log('Binary representation:', binaryString);
 
-  console.log('Hex dump:\n', buffer.toString('hex'));
+  const restoredBytes = binaryString.split(' ').map(bin => parseInt(bin, 2));
+  const restoredBuffer = Buffer.from(restoredBytes);
 
-  console.log('Binary-as-text \n', buffer.toString('binary'));
+  const restoredMessage = restoredBuffer.toString('utf-8');
+  console.log('Restored message:', restoredMessage);
+
+  rl.close();
 });
