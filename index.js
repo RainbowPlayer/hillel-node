@@ -1,79 +1,118 @@
-const { MongoClient } = require('mongodb');
+const mysql = require('mysql2/promise');
 
-const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017';
-const dbName = 'school';
+async function main() {
+  const connection = await mysql.createConnection({
+    host: 'localhost',
+    user: 'root',
+    password: '',
+    database: 'online_courses'
+  });
 
-(async () => {
-  const client = new MongoClient(uri);
-  try {
-    await client.connect();
-    console.log('Connected to MongoDB');
-    const db = client.db(dbName);
-    const students = db.collection('students');
+  await connection.execute(`
+    CREATE TABLE IF NOT EXISTS Students (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      name VARCHAR(100) NOT NULL
+    );
+  `);
+  await connection.execute(`
+    CREATE TABLE IF NOT EXISTS Courses (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      title VARCHAR(100) NOT NULL
+    );
+  `);
+  await connection.execute(`
+    CREATE TABLE IF NOT EXISTS Enrollments (
+      student_id INT,
+      course_id INT,
+      grade DECIMAL(5,2),
+      PRIMARY KEY(student_id, course_id),
+      FOREIGN KEY(student_id) REFERENCES Students(id) ON DELETE CASCADE,
+      FOREIGN KEY(course_id)  REFERENCES Courses(id) ON DELETE CASCADE
+    );
+  `);
 
-    await students.deleteMany({});
+  await connection.execute(`DELETE FROM Enrollments;`);
+  await connection.execute(`DELETE FROM Students;`);
+  await connection.execute(`DELETE FROM Courses;`);
 
-    const docs = [
-      { name: 'Ivan',   age: 21, group: 'A-31', marks: [75, 90, 82] },
-      { name: 'Oksana', age: 22, group: 'B-12', marks: [88, 76, 91] },
-      { name: 'Petro',  age: 20, group: 'A-31', marks: [65, 70, 72] },
-      { name: 'Maria',  age: 23, group: 'C-05', marks: [95, 98, 99] },
-      { name: 'Andriy', age: 19, group: 'B-12', marks: [80, 85, 88] }
-    ];
-    await students.insertMany(docs);
-    console.log('Inserted students.');
+  await connection.execute(`ALTER TABLE Students AUTO_INCREMENT = 1;`);
+  await connection.execute(`ALTER TABLE Courses AUTO_INCREMENT = 1;`);
+  await connection.execute(`ALTER TABLE Enrollments AUTO_INCREMENT = 1;`);
 
-    console.log('\nAll students:');
-    console.table(await students.find().toArray());
+  await connection.query(`
+    INSERT INTO Students (name) VALUES 
+      ('Оля'), 
+      ('Іван'),
+      ('Марія');
+  `);
+  await connection.query(`
+    INSERT INTO Courses (title) VALUES 
+      ('SQL Basics'),
+      ('Node.js Fundamentals'),
+      ('Advanced MySQL');
+  `);
+  await connection.query(`
+    INSERT INTO Enrollments (student_id, course_id, grade) VALUES
+      (1, 1, 90.00),
+      (1, 2, 80.00),
+      (2, 1, 70.00),
+      (2, 3, 95.00),
+      (3, 2, 88.00),
+      (3, 3, 92.00);
+  `);
 
-    await students.updateOne({ name: 'Ivan' }, { $set: { age: 22 } });
-    console.log("\nAfter updating Ivan's age:");
-    console.table([await students.findOne({ name: 'Ivan' })]);
+  const [allAvg] = await connection.query(`
+    SELECT s.name, ROUND(AVG(e.grade),2) AS avg_grade
+    FROM Students s
+    LEFT JOIN Enrollments e ON s.id = e.student_id
+    GROUP BY s.id;
+  `);
+  console.log('\nВсі студенти із середнім балом:');
+  console.table(allAvg);
 
-    await students.deleteOne({ group: 'A-31' });
-    console.log('\nAfter deleting one from A-31:');
-    console.table(await students.find().toArray());
+  const [sqlStudents] = await connection.query(`
+    SELECT s.name
+    FROM Students s
+    JOIN Enrollments e ON s.id = e.student_id
+    JOIN Courses c ON e.course_id = c.id
+    WHERE c.title = 'SQL Basics';
+  `);
+  console.log('\nСтуденти на курсі "SQL Basics":');
+  console.table(sqlStudents);
 
-    const olderThan20 = await students.find({ age: { $gt: 20 } }).toArray();
-    console.log('\nStudents older than 20:');
-    console.table(olderThan20);
+  const [topStudent] = await connection.query(`
+    SELECT s.name, ROUND(AVG(e.grade),2) AS avg_grade
+    FROM Students s
+    JOIN Enrollments e ON s.id = e.student_id
+    GROUP BY s.id
+    ORDER BY avg_grade DESC
+    LIMIT 1;
+  `);
+  console.log('\nТоп-1 студент за середнім балом:');
+  console.table(topStudent);
 
-    const marksAbove85 = await students.find({ marks: { $elemMatch: { $gt: 85 } } }).toArray();
-    console.log('\nStudents with marks above 85:');
-    console.table(marksAbove85);
+  const [counts] = await connection.query(`
+    SELECT c.title, COUNT(e.student_id) AS student_count
+    FROM Courses c
+    LEFT JOIN Enrollments e ON c.id = e.course_id
+    GROUP BY c.id;
+  `);
+  console.log('\nКількість студентів у кожному курсі:');
+  console.table(counts);
 
-    const nameStartsA = await students.find({ name: { $regex: '^A' } }).toArray();
-    console.log("\nStudents whose name starts with 'A':");
-    console.table(nameStartsA);
+  const [highAvgCourses] = await connection.query(`
+    SELECT c.title, ROUND(AVG(e.grade),2) AS avg_grade
+    FROM Courses c
+    JOIN Enrollments e ON c.id = e.course_id
+    GROUP BY c.id
+    HAVING avg_grade > 85;
+  `);
+  console.log('\nКурси зі середнім балом > 85:');
+  console.table(highAvgCourses);
 
-    const sortedByAgeDesc = await students.find().sort({ age: -1 }).toArray();
-    console.log('\nStudents sorted by age descending:');
-    console.table(sortedByAgeDesc);
+  await connection.end();
+}
 
-    const avgPerStudent = await students.aggregate([
-      { $project: { _id: 0, name: 1, avgMark: { $avg: '$marks' } } }
-    ]).toArray();
-    console.log('\nAverage mark per student:');
-    console.table(avgPerStudent);
-
-    const countPerGroup = await students.aggregate([
-      { $group: { _id: '$group', count: { $sum: 1 } } }
-    ]).toArray();
-    console.log('\nCount of students per group:');
-    console.table(countPerGroup);
-
-    const overallAvg = await students.aggregate([
-      { $unwind: '$marks' },
-      { $group: { _id: null, overallAvg: { $avg: '$marks' } } },
-      { $project: { _id: 0, overallAvg: 1 } }
-    ]).toArray();
-    console.log('\nOverall average mark:');
-    console.table(overallAvg);
-
-  } catch (err) {
-    console.error('Error:', err);
-  } finally {
-    await client.close();
-    console.log('Connection closed');
-  }
-})();
+main().catch(err => {
+  console.error('Помилка:', err);
+});
