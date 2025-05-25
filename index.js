@@ -1,9 +1,11 @@
-const fs = require('fs');
+const express = require('express');
+const authRoutes = require('./src/routes/auth');
 
-fs.copyFile('source.txt', 'copy.txt', (err) => {
-  if (err) {
-    console.error('Error copying file:', err);
-    process.exit(1);
-  }
-  console.log('File successfully');
-});
+const app = express();
+app.use(express.json());
+
+const PORT = 3000;
+
+app.use('/', authRoutes);
+
+app.listen(PORT);
