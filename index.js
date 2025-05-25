@@ -1,11 +1,7 @@
-const express = require('express');
-const authRoutes = require('./src/routes/auth');
-
-const app = express();
-app.use(express.json());
+const app = require('./src/app');
 
 const PORT = 3000;
 
-app.use('/', authRoutes);
-
-app.listen(PORT);
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
