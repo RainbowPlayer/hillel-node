@@ -134,4 +134,115 @@ curl -X GET http://localhost:3000/profile
 Expected response:
 ```json
 {"message":"Authentication token required"}
-``` 
+```
+
+## Jira Integration
+
+### Prerequisites
+1. Create a Jira account at https://www.atlassian.com/software/jira
+2. Create a new project in Jira
+3. Generate an API token at https://id.atlassian.com/manage-profile/security/api-tokens
+
+### Configuration
+Create a `.env` file in the project root with the following content:
+```
+JIRA_HOST=your-domain.atlassian.net
+JIRA_EMAIL=your-email@example.com
+JIRA_API_TOKEN=your-jira-api-token
+JWT_SECRET=your-secret-key
+JWT_EXPIRES_IN=24h
+```
+
+### Jira API Endpoints
+
+#### 1. Create a Jira Issue
+**POST /atlassian/issues**
+
+Headers:
+```
+Authorization: Bearer your_jwt_token
+Content-Type: application/json
+```
+
+Request body:
+```json
+{
+  "summary": "Issue Title",
+  "description": "Issue Description",
+  "issueType": "Task"
+}
+```
+
+Example:
+```bash
+curl -X POST http://localhost:3000/atlassian/issues \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your_jwt_token" \
+  -d '{
+    "summary": "Test Issue",
+    "description": "This is a test issue created via API",
+    "issueType": "Task"
+  }'
+```
+
+#### 2. Get Jira Issue
+**GET /atlassian/issues/:issueKey**
+
+Headers:
+```
+Authorization: Bearer your_jwt_token
+```
+
+Example:
+```bash
+curl -X GET http://localhost:3000/atlassian/issues/KAN-1 \
+  -H "Authorization: Bearer your_jwt_token"
+```
+
+### Complete Jira Integration Flow
+
+1. Register and login to get JWT token:
+```bash
+# Register
+curl -X POST http://localhost:3000/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"your-email@example.com", "password":"your_password"}'
+
+# Login
+curl -X POST http://localhost:3000/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"your-email@example.com", "password":"your_password"}'
+```
+
+2. Create a Jira issue using the token:
+```bash
+curl -X POST http://localhost:3000/atlassian/issues \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your_jwt_token" \
+  -d '{
+    "summary": "Test Issue",
+    "description": "This is a test issue created via API",
+    "issueType": "Task"
+  }'
+```
+
+3. Get issue details:
+```bash
+curl -X GET http://localhost:3000/atlassian/issues/KAN-1 \
+  -H "Authorization: Bearer your_jwt_token"
+```
+
+### Troubleshooting
+
+1. If you get "Authentication token required":
+   - Make sure you're logged in and have a valid JWT token
+   - Check that the token is correctly set in the Authorization header
+
+2. If you get "Invalid or expired token":
+   - Login again to get a new token
+   - Make sure the JWT_SECRET in .env matches the one used to create the token
+
+3. If you get Jira API errors:
+   - Verify your Jira API token is correct
+   - Check that your Jira project key matches the one in the code (default: 'KAN')
+   - Ensure you have the necessary permissions in Jira 
